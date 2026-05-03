@@ -854,24 +854,27 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
               return;
             }
 
-            maaService.onCallback((message, details) => {
-              if (resolved) return;
-              if (details.ctrl_id !== ctrlId) return;
-              if (message === 'Controller.Action.Succeeded') {
-                handleSuccess();
-              } else if (message === 'Controller.Action.Failed') {
+            maaService
+              .onCallback((message, details) => {
+                if (resolved) return;
+                if (details.ctrl_id !== ctrlId) return;
+                if (message === 'Controller.Action.Succeeded') {
+                  handleSuccess();
+                } else if (message === 'Controller.Action.Failed') {
+                  handleFailure();
+                }
+              })
+              .then((cb) => {
+                if (!resolved) {
+                  unlistenCb = cb;
+                } else {
+                  cb();
+                }
+              })
+              .catch((err) => {
+                log.error(`实例 ${targetInstance.name}: 注册 maa-callback 监听失败:`, err);
                 handleFailure();
-              }
-            }).then((cb) => {
-              if (!resolved) {
-                unlistenCb = cb;
-              } else {
-                cb();
-              }
-            }).catch((err) => {
-              log.error(`实例 ${targetInstance.name}: 注册 maa-callback 监听失败:`, err);
-              handleFailure();
-            });
+              });
             const handleStateChanged = (instanceId: string, kind: string) => {
               if (resolved) return;
               if (instanceId === targetId && kind === 'connected') {
@@ -881,16 +884,19 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
             };
 
             if (isTauri()) {
-              import('@tauri-apps/api/event').then(({ listen }) =>
-                listen<{ instance_id: string; kind: string }>('state-changed', (event) =>
-                  handleStateChanged(event.payload.instance_id, event.payload.kind),
-                ),
-              ).then((dispose) => {
-                if (resolved) dispose();
-                else unlistenState = dispose;
-              }).catch((err) => {
-                log.warn('注册 state-changed 监听失败:', err);
-              });
+              import('@tauri-apps/api/event')
+                .then(({ listen }) =>
+                  listen<{ instance_id: string; kind: string }>('state-changed', (event) =>
+                    handleStateChanged(event.payload.instance_id, event.payload.kind),
+                  ),
+                )
+                .then((dispose) => {
+                  if (resolved) dispose();
+                  else unlistenState = dispose;
+                })
+                .catch((err) => {
+                  log.warn('注册 state-changed 监听失败:', err);
+                });
             } else {
               unlistenState = onStateChanged(handleStateChanged);
             }

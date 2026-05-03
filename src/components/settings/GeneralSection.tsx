@@ -168,7 +168,7 @@ export function GeneralSection() {
           )}
 
           {/* ② 启动后自动执行 */}
-          <div className={isTauri() ? "pt-4 border-t border-border" : ""}>
+          <div className={isTauri() ? 'pt-4 border-t border-border' : ''}>
             <div className="flex items-center gap-3 mb-3">
               <Play className="w-5 h-5 text-accent" />
               <div>
@@ -321,7 +321,10 @@ export function GeneralSection() {
               </p>
             </div>
           </div>
-          <SwitchButton value={autoClearLogsOnLaunch} onChange={(v) => setAutoClearLogsOnLaunch(v)} />
+          <SwitchButton
+            value={autoClearLogsOnLaunch}
+            onChange={(v) => setAutoClearLogsOnLaunch(v)}
+          />
         </div>
       </div>
 

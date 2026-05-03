@@ -26,13 +26,8 @@ export function LogsPanel() {
   const isMobile = useIsMobile();
   const logsContainerRef = useRef<HTMLDivElement>(null);
 
-  const {
-    sidePanelExpanded,
-    toggleSidePanelExpanded,
-    activeInstanceId,
-    instanceLogs,
-    clearLogs,
-  } = useAppStore();
+  const { sidePanelExpanded, toggleSidePanelExpanded, activeInstanceId, instanceLogs, clearLogs } =
+    useAppStore();
   const { state: menuState, show: showMenu, hide: hideMenu } = useContextMenu();
   const { exportModal, handleExportLogs, closeExportModal, openExportedFile } = useExportLogs();
 

@@ -115,7 +115,8 @@ export default {
     resetWindowLayout: 'Reset Window Layout',
     resetWindowLayoutHint: 'Restore window size to default and center the window',
     autoClearLogsOnLaunch: 'Auto-clear Runtime Logs',
-    autoClearLogsOnLaunchHint: 'Automatically clear runtime logs and delete old log files every time the project is launched',
+    autoClearLogsOnLaunchHint:
+      'Automatically clear runtime logs and delete old log files every time the project is launched',
   },
 
   // Special tasks

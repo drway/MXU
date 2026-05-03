@@ -2,7 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '@/stores/appStore';
-import { resolveContent, markdownToHtmlWithLocalImages, markdownToHtml } from '@/services/contentResolver';
+import {
+  resolveContent,
+  markdownToHtmlWithLocalImages,
+  markdownToHtml,
+} from '@/services/contentResolver';
 import { getInterfaceLangKey } from '@/i18n';
 import { loggers } from '@/utils/logger';
 

@@ -567,11 +567,7 @@ pub async fn connect_controller_impl(
                 ..
             } => Controller::new_wlroots_with_vk_code(wlr_socket_path, *use_win32_vk_code)
                 .map_err(|e| e.to_string())?,
-            ControllerConfig::PlayCover {
-                address,
-                uuid,
-                ..
-            } => {
+            ControllerConfig::PlayCover { address, uuid, .. } => {
                 let uuid_str = uuid.as_deref().unwrap_or("");
                 Controller::new_playcover(address, uuid_str).map_err(|e| e.to_string())?
             }
@@ -606,24 +602,19 @@ pub async fn connect_controller_impl(
 
         let display_short_side = match &config {
             ControllerConfig::Adb {
-                display_short_side,
-                ..
+                display_short_side, ..
             }
             | ControllerConfig::Win32 {
-                display_short_side,
-                ..
+                display_short_side, ..
             }
             | ControllerConfig::WlRoots {
-                display_short_side,
-                ..
+                display_short_side, ..
             }
             | ControllerConfig::Gamepad {
-                display_short_side,
-                ..
+                display_short_side, ..
             }
             | ControllerConfig::PlayCover {
-                display_short_side,
-                ..
+                display_short_side, ..
             } => display_short_side.unwrap_or(720),
         };
 
