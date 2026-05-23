@@ -1,4 +1,12 @@
-import { Fragment, useRef, useEffect, useCallback, useState, useMemo, useLayoutEffect } from 'react';
+import {
+  Fragment,
+  useRef,
+  useEffect,
+  useCallback,
+  useState,
+  useMemo,
+  useLayoutEffect,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eraser, Copy, ChevronUp, ChevronDown, Archive } from 'lucide-react';
 import clsx from 'clsx';
@@ -12,10 +20,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { getCurrentLogFileName } from '@/utils/logger';
 import { clearPersistedRuntimeLogs } from '@/utils/runtimeLogPersistence';
 import { getAllLogsFromBackend } from '@/utils/logStdout';
-import {
-  loadPersistedRuntimeLogs,
-  mergeRuntimeLogs,
-} from '@/utils/runtimeLogPersistence';
+import { loadPersistedRuntimeLogs, mergeRuntimeLogs } from '@/utils/runtimeLogPersistence';
 import type { LogEntry } from '@/stores/types';
 
 const DEFAULT_VISIBLE_LOG_LIMIT = 500;
@@ -56,7 +61,8 @@ export function LogsPanel() {
   const logs = activeInstanceId ? instanceLogs[activeInstanceId] || [] : [];
   const visibleLogs = useMemo(() => logs.slice(-visibleLogLimit), [logs, visibleLogLimit]);
   const canShowMoreLogs =
-    visibleLogLimit === DEFAULT_VISIBLE_LOG_LIMIT && visibleLogs.length === DEFAULT_VISIBLE_LOG_LIMIT;
+    visibleLogLimit === DEFAULT_VISIBLE_LOG_LIMIT &&
+    visibleLogs.length === DEFAULT_VISIBLE_LOG_LIMIT;
 
   useEffect(() => {
     setVisibleLogLimit(DEFAULT_VISIBLE_LOG_LIMIT);
@@ -75,7 +81,8 @@ export function LogsPanel() {
     if (!el) return;
 
     const top = el.scrollTop <= 4;
-    const bottom = el.scrollHeight - el.scrollTop - el.clientHeight <= BOTTOM_FOLLOW_THRESHOLD_PX * 2;
+    const bottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight <= BOTTOM_FOLLOW_THRESHOLD_PX * 2;
 
     setIsAtTop(top);
     isFollowingTailRef.current = bottom;
