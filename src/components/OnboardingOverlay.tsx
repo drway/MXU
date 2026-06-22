@@ -49,12 +49,8 @@ function hasActiveModal(): boolean {
  */
 export function OnboardingOverlay() {
   const { t } = useTranslation();
-  const {
-    onboardingCompleted,
-    setOnboardingCompleted,
-    setShowAddTaskPanel,
-    projectInterface,
-  } = useAppStore();
+  const { onboardingCompleted, setOnboardingCompleted, setShowAddTaskPanel, projectInterface } =
+    useAppStore();
 
   const isDevMode = useMemo(
     () => import.meta.env.DEV || isDebugVersion(projectInterface?.version),

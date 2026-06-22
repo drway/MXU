@@ -445,7 +445,12 @@ fn collect_debug_images(dir: &Path, archive_prefix: &str) -> Vec<ExportEntry> {
         Ok(rd) => rd,
         Err(e) => {
             // 目录不存在的情况上面已经 return 了，所以走到这里通常是权限或 IO 问题。
-            log::warn!("读取 {} 目录失败 [{}]: {}", archive_prefix, dir.display(), e);
+            log::warn!(
+                "读取 {} 目录失败 [{}]: {}",
+                archive_prefix,
+                dir.display(),
+                e
+            );
             return Vec::new();
         }
     };
