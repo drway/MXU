@@ -142,6 +142,40 @@ function getOS(): string {
   return '';
 }
 
+let cachedArchPromise: Promise<string> | null = null;
+
+/**
+ * 获取系统架构（优先使用后端真实值）
+ *
+ * 后端返回值通常是 `x86_64` / `aarch64`，这里统一映射为更新逻辑使用的
+ * `amd64` / `arm64`，避免 Apple Silicon 被误判为 x86。
+ *
+ * 优先读 store 中已缓存的后端架构（interfaceLoader 在 Tauri/HTTP 两条路径均会填充，
+ * 使 WebUI 远程也能拿到后端真实架构）；store 尚未填充时回退到直接 invoke（仅 Tauri 可用），
+ * 再失败则回退 amd64。
+ */
+async function getArch(): Promise<string> {
+  if (!cachedArchPromise) {
+    cachedArchPromise = (async () => {
+      let raw = useAppStore.getState().backendArch;
+      if (!raw) raw = await invoke<string>('get_arch');
+      const normalized = raw.toLowerCase();
+      if (normalized === 'x86_64' || normalized === 'x64' || normalized === 'amd64') {
+        return 'amd64';
+      }
+      if (normalized === 'aarch64' || normalized === 'arm64') {
+        return 'arm64';
+      }
+      return normalized;
+    })().catch((error) => {
+      log.warn('获取系统架构失败，回退到 amd64:', error);
+      return 'amd64';
+    });
+  }
+
+  return cachedArchPromise;
+}
+
 /**
  * 从 URL 中提取文件名
  * 支持格式：
@@ -179,18 +213,17 @@ function getOSAliases(): string[] {
 }
 
 // 获取架构的常见别名（用于匹配文件名）
-function getArchAliases(): string[] {
-  const arch = getArch();
+function getArchAliases(arch: string): string[] {
   if (arch === 'amd64') return ['x86_64', 'x64', 'amd64', 'x86-64'];
   if (arch === 'arm64') return ['aarch64', 'arm64'];
-  return [];
+  return [arch];
 }
 
 // 构建 User-Agent 字符串
-function buildUserAgent(): string {
+async function buildUserAgent(): Promise<string> {
   const version = typeof __MXU_VERSION__ !== 'undefined' ? __MXU_VERSION__ : 'unknown';
   const os = getOS();
-  const arch = getArch();
+  const arch = await getArch();
 
   // 构建平台信息字符串
   let platformInfo = '';
@@ -204,19 +237,6 @@ function buildUserAgent(): string {
 
   // 格式: MXU/版本号 (平台信息) Tauri/2.0
   return `MXU/${version} (${platformInfo}; ${arch}) Tauri/2.0`;
-}
-
-// 获取 CPU 架构（以后端真实架构为准；后端未知时回退到 amd64）
-function getArch(): string {
-  const arch = useAppStore.getState().backendArch;
-  if (arch) {
-    // 归一化到更新资产匹配常用的基线名
-    if (arch.includes('x86_64') || arch === 'x64') return 'amd64';
-    if (arch.includes('aarch64') || arch === 'arm64') return 'arm64';
-    return arch;
-  }
-  // 后端架构未知（纯前端 dev 预览）时回退
-  return 'amd64';
 }
 
 export interface CheckUpdateOptions {
@@ -238,7 +258,7 @@ async function fetchUpdateFromBase(
   const url = `${apiBase}/${resourceId}/latest?${params.toString()}`;
   const response = await tauriFetch(url, {
     headers: {
-      'User-Agent': buildUserAgent(),
+      'User-Agent': await buildUserAgent(),
     },
   });
   return await response.json();
@@ -269,7 +289,7 @@ export async function checkUpdate(options: CheckUpdateOptions): Promise<UpdateIn
 
   // 添加系统信息
   const os = getOS();
-  const arch = getArch();
+  const arch = await getArch();
   if (os) params.set('os', os);
   if (arch) params.set('arch', arch);
 
@@ -521,8 +541,7 @@ function getOSForDownload(): string {
 /**
  * 获取架构名称用于直接下载链接（与 release 文件名匹配的格式）
  */
-function getArchForDownload(): string {
-  const arch = getArch();
+function getArchForDownload(arch: string): string {
   if (arch === 'amd64') return 'x86_64';
   if (arch === 'arm64') return 'aarch64';
   return arch;
@@ -539,12 +558,13 @@ function buildDirectDownloadUrl(
   projectName: string,
   version: string,
   extension: string,
+  arch: string,
 ): string {
   const os = getOSForDownload();
-  const arch = getArchForDownload();
+  const downloadArch = getArchForDownload(arch);
   // 确保版本号有 v 前缀
   const versionTag = version.startsWith('v') ? version : `v${version}`;
-  const filename = `${projectName}-${os}-${arch}-${versionTag}${extension}`;
+  const filename = `${projectName}-${os}-${downloadArch}-${versionTag}${extension}`;
   return `https://github.com/${owner}/${repo}/releases/download/${versionTag}/${filename}`;
 }
 
@@ -559,20 +579,21 @@ async function tryDirectDownloadUrls(
   version: string,
 ): Promise<{ url: string; filename: string } | null> {
   const extensions = getDownloadExtensions();
+  const arch = await getArch();
 
   for (const ext of extensions) {
-    const url = buildDirectDownloadUrl(owner, repo, projectName, version, ext);
+    const url = buildDirectDownloadUrl(owner, repo, projectName, version, ext, arch);
     const os = getOSForDownload();
-    const arch = getArchForDownload();
+    const downloadArch = getArchForDownload(arch);
     const versionTag = version.startsWith('v') ? version : `v${version}`;
-    const filename = `${projectName}-${os}-${arch}-${versionTag}${ext}`;
+    const filename = `${projectName}-${os}-${downloadArch}-${versionTag}${ext}`;
 
     try {
       log.info(`尝试直接下载链接: ${url}`);
       const response = await tauriFetch(url, {
         method: 'HEAD',
         headers: {
-          'User-Agent': buildUserAgent(),
+          'User-Agent': await buildUserAgent(),
         },
       });
 
@@ -593,9 +614,10 @@ async function tryDirectDownloadUrls(
  * 根据 OS 和架构匹配合适的 GitHub Asset
  * 优先匹配 OS + 架构，多个匹配时优先选择名字带 mxu 的，否则选体积最大的
  */
-function matchGitHubAsset(assets: GitHubAsset[]): GitHubAsset | null {
+async function matchGitHubAsset(assets: GitHubAsset[]): Promise<GitHubAsset | null> {
   const osAliases = getOSAliases();
-  const archAliases = getArchAliases();
+  const arch = await getArch();
+  const archAliases = getArchAliases(arch);
 
   // 先找出所有匹配 OS + 架构的 assets
   const candidates: GitHubAsset[] = [];
@@ -667,7 +689,7 @@ export async function getGitHubDownloadUrl(
 
   if (release) {
     // API 请求成功，使用 assets 匹配
-    const asset = matchGitHubAsset(release.assets);
+    const asset = await matchGitHubAsset(release.assets);
     if (asset) {
       log.info(`匹配到 GitHub 下载文件: ${asset.name}`);
       return {
